@@ -538,6 +538,6 @@ class CapsuleCards(Comp):
             S = L["sub"]
             sa = smooth(lin(t, sub_chunk[0] - 0.1, sub_chunk[0] + 0.05)) * (1 - smooth(lin(t, sub_chunk[1] - 0.05, sub_chunk[1] + 0.1)))
             lines = T.wrap(sub_chunk[2], "semibold", S["size"], S["max_w"])
-            G.subtitle(c, lines, S["cx"], self.H * (0.86 if self.fmt == "9x16" else 0.80) if self.fmt != "16x9" else S["cy"] - 10,
-                       S["size"], sa, S["max_w"])
+            # above the disclaimer in every format (16:9's usual subtitle row is where the disclaimer sits here)
+            G.subtitle(c, lines, S["cx"], self.H * (0.86 if self.fmt == "9x16" else 0.80), S["size"], sa, S["max_w"])
         return self.surface.makeImageSnapshot().toarray(colorType=skia.kRGBA_8888_ColorType)[..., :3]

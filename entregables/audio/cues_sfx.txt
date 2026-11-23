@@ -1,0 +1,106 @@
+  0.000  line glides in
+  0.200  logo drawn (crystal shimmer)
+  0.900  wordmark
+  1.060  thread 1
+  1.115  thread 2
+  1.170  thread 3
+  1.225  thread 4
+  1.280  thread 5
+  1.335  thread 6
+  2.400  line detaches
+  2.550  3D tooth materialises (scan)
+  3.120  jaw grows in
+  3.350  x-ray scan
+  3.500  cut-away opens
+  4.000  endo: capsule swipe
+  5.500  caries highlighted
+  7.299  pulp throbs
+  7.450  endo: step 1 tone
+  7.550  anaesthesia wave
+  8.391  endo: step 2 tone
+  8.391  line enters the canals
+  8.691  pulp dissolves (particles)
+  8.991  canal 1
+  9.741  canal 2
+ 10.491  canal 3
+ 10.997  irrigation glint
+ 11.920  endo: step 3 tone
+ 12.040  gutta-percha fills canal 1
+ 12.320  gutta-percha fills canal 2
+ 12.600  gutta-percha fills canal 3
+ 12.970  restoration closes
+ 13.500  endo: result chime
+ 15.000  line travels to the wisdom tooth
+ 15.500  endo: capsule out
+ 15.550  diagonal bands whoosh
+ 16.000  ciru: capsule swipe
+ 16.150  cut-away opens
+ 17.400  outline of the retained tooth
+ 19.786  contact pulse
+ 21.034  ciru: step 1 tone
+ 21.134  anaesthesia wave
+ 22.291  ciru: step 2 tone
+ 22.291  incision line
+ 22.641  flap opens
+ 22.891  bone window clears
+ 23.241  tooth rises out gently
+ 24.350  ciru: step 3 tone
+ 24.350  flap returns
+ 24.800  stitch 1
+ 25.020  stitch 2
+ 25.100  healing time-lapse
+ 25.240  stitch 3
+ 26.200  ciru: result chime
+ 27.000  line crosses the arch
+ 27.500  ciru: capsule out
+ 27.550  diagonal bands whoosh
+ 28.000  impl: capsule swipe
+ 28.300  cut-away opens
+ 29.500  ghost tooth outline
+ 32.000  impl: step 1 tone
+ 32.000  glass radiograph appears
+ 32.400  planning marker
+ 33.495  impl: step 2 tone
+ 33.495  line winds into the thread
+ 33.845  implant settles
+ 34.695  titanium cools
+ 35.600  impl: step 3 tone
+ 35.700  osseointegration sparkles
+ 36.650  healing screw seated
+ 37.700  impl: result chime
+ 39.500  impl: capsule out
+ 39.550  diagonal bands whoosh
+ 40.000  rehab: capsule swipe
+ 41.400  ghost crown outline
+ 42.900  rehab: step 1 tone
+ 42.900  healing screw removed
+ 43.500  scan sweep
+ 43.600  scan points
+ 44.421  rehab: step 2 tone
+ 44.421  abutment descends
+ 44.621  crown made to measure (points)
+ 44.971  abutment click
+ 45.521  crown descends
+ 46.171  crown seats
+ 46.850  rehab: step 3 tone
+ 46.900  opposing arch closes
+ 47.850  contact point 1
+ 47.950  bite closes
+ 47.950  contact point 2
+ 48.050  contact point 3
+ 48.150  contact point 4
+ 48.250  contact point 5
+ 48.503  camera pulls back
+ 48.603  rehab: result chime
+ 49.803  smile curve drawn
+ 51.500  rehab: capsule out
+ 51.750  diagonal bands whoosh
+ 51.800  line lifts to the logo
+ 52.400  logo snap sparkle
+ 53.050  doctor photo slides in
+ 53.100  treatment capsule 1
+ 53.240  treatment capsule 2
+ 53.380  treatment capsule 3
+ 53.520  treatment capsule 4
+ 55.500  contact block appears
+ 58.538  end plate

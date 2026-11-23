@@ -1,0 +1,12 @@
+master integrated: -14.00 LUFS
+master true peak: -1.20 dBTP
+voice in master: -13.53 LUFS
+music bed between phrases: -19.0 LUFS (pre-master)
+music duck under voice: -13.5 dB
+min music margin under any word: 13.0 dB
+min sfx margin under any word: 12.5 dB
+closest words (music): dentro@2.12s 13.0dB, Maipú@52.96s 13.4dB, diente@14.08s 13.6dB, Odonto@52.40s 14.0dB, medida@45.47s 14.5dB
+capsule 1 endo: -14.00 LUFS, -2.33 dBTP
+capsule 2 ciru: -14.00 LUFS, -1.68 dBTP
+capsule 3 impl: -14.00 LUFS, -1.20 dBTP
+capsule 4 rehab: -14.00 LUFS, -2.05 dBTP
