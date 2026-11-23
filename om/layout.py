@@ -18,9 +18,9 @@ def layout(fmt):
                  logo_close=dict(h=300, w=300 * LG.ASPECT, x=(W - 300 * LG.ASPECT) / 2, y=120),
                  wordmark_close=dict(cx=W / 2, y=448, size=38, align="center"),
                  title=dict(x=W / 2, y=640, size=50, align="center"),
-                 photo=dict(x=60, y=700, w=440, h=600),
-                 caps=dict(x=540, y=730, w=480, gap=140, size=27),
-                 cta=dict(cx=W / 2, y=1395, size=36, align="center"),
+                 photo=dict(x=50, y=700, w=440, h=620),
+                 caps=dict(x=520, y=720, w=510, gap=150, size=30),
+                 cta=dict(cx=W / 2, y=1420, size=40, align="center"),
                  end_logo=dict(h=230, w=230 * LG.ASPECT, x=(W - 230 * LG.ASPECT) / 2, y=740),
                  disclaimer=dict(cx=W / 2, y=1600, size=26, max_w=860))
     elif fmt == "4x5":
@@ -37,9 +37,9 @@ def layout(fmt):
                  logo_close=dict(h=190, w=190 * LG.ASPECT, x=70, y=70),
                  wordmark_close=dict(cx=70 + 190 * LG.ASPECT + 34, y=118, size=36, align="left"),
                  title=dict(x=560, y=370, size=40, align="left"),
-                 photo=dict(x=60, y=320, w=450, h=560),
-                 caps=dict(x=560, y=410, w=460, gap=118, size=25),
-                 cta=dict(cx=W / 2, y=910, size=32, align="center"),
+                 photo=dict(x=60, y=320, w=450, h=520),
+                 caps=dict(x=560, y=410, w=460, gap=112, size=25),
+                 cta=dict(cx=W / 2, y=935, size=32, align="center"),
                  end_logo=dict(h=200, w=200 * LG.ASPECT, x=(W - 200 * LG.ASPECT) / 2, y=460),
                  disclaimer=dict(cx=W / 2, y=1100, size=24, max_w=900))
     else:  # 16x9

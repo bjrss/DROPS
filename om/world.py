@@ -260,7 +260,7 @@ def gum_outer_sdf(P):
     bone_crest = _interp_s(s, [(0, -1.02), (1.3, -1.12), (2.5, -0.98), (6.0, -0.94), (S_END, -1.0)])
     bone_half_top = _interp_s(s, [(0, 0.36), (1.5, 0.42), (3.0, 0.52), (6.0, 0.56), (S_END, 0.56)])
     kb = np.clip((bone_crest - z) / 1.6, 0, 1)
-    thick = np.interp(top - z, [0.0, 0.75, 1.35, 3.0], [0.13, 0.12, -0.06, -0.06])
+    thick = np.interp(top - z, [0.0, 0.75, 3.0], [0.13, 0.12, 0.12])
     half_top = bone_half_top
     bottom = -3.25
     half = bone_half_top + 0.28 * kb + thick
@@ -272,6 +272,8 @@ def gum_outer_sdf(P):
     q = np.stack([q0, q1], -1)
     D = length(np.maximum(q, 0)) + np.minimum(np.maximum(q0, q1), 0) - r
     D = smax(D, np.abs(s) - (S_END + 0.15), 0.45)
+    # the attached gingiva ends in a clean, rounded line ~1.1 cm below the margin (bone below)
+    D = smax(D, (top - 1.12 - 0.08 * np.cos(s * 3.1)) - z, 0.06)
     # cuffs hugging the erupted teeth necks
     cuff = teeth_union(P, lambda t: (not t["upper"]) and t["present"] and not t["impacted"], dilate=0.07)
     neck = np.abs(z - (base + 0.05)) - 0.2

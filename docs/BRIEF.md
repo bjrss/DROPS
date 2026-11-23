@@ -13,7 +13,7 @@ Brief técnico generado desde el código (`om/timeline.py`, `build/vo/timing.jso
 |   2.40 |    72 | Fin del reposo del logo |
 |   2.40 |    72 | La línea se desprende de la punta de la raíz |
 |   2.55 |    76 | El diente 3D (36) se materializa exactamente donde estaba el logo (barrido de luz) |
-|   3.00 |    90 | Encía, hueso y dientes vecinos crecen alrededor del diente |
+|   3.12 |    94 | Encía, hueso y dientes vecinos crecen alrededor del diente |
 |   3.25 |    98 | Diente 3D completo |
 |   3.35 |   100 | Modo rayos X: barrido de abajo hacia arriba; se abre el corte del hueso |
 |   3.90 |   117 | Arcada completa revelada |
@@ -112,7 +112,7 @@ Ajustes por la grabación real: «Odonto Maipú. De la raíz a tu sonrisa.» emp
 |   1.33 |    40 | thread 6 |
 |   2.40 |    72 | line detaches |
 |   2.55 |    76 | 3D tooth materialises (scan) |
-|   3.00 |    90 | jaw grows in |
+|   3.12 |    94 | jaw grows in |
 |   3.35 |   100 | x-ray scan |
 |   3.50 |   105 | cut-away opens |
 |   4.00 |   120 | endo: capsule swipe |
