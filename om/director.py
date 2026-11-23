@@ -300,7 +300,7 @@ def line_items(t, fmt, layout):
     if B["c2.problem"] < t < B["c2.s1"] + 0.2:
         # outline of the retained wisdom tooth + soft pulse where it presses on the neighbour
         sil = silhouette()
-        P = W.to_world(sil * [1.08, 1, 1.05] + [0, -0.55, 0], w38["M"], w38["scale"])
+        P = W.to_world(sil * [1.04, 1, 1.03] + [0, -0.18, 0], w38["M"], w38["scale"])
         k = in_out_sine(lin(t, B["c2.problem"] + 0.2, B["c2.problem"] + 1.4))
         inten = 1 - smooth(lin(t, B["c2.s1"] - 0.3, B["c2.s1"]))
         out.append(item(pr(P)[0], head=k, tail=0, width=LW * 0.7, intensity=0.85 * inten, dash=(16, 12), spark=k < 1, closed=False))
@@ -352,7 +352,7 @@ def line_items(t, fmt, layout):
     Mc = W.site_frame(46)
     if B["c3.problem"] < t < B["c3.s2"]:
         sil = silhouette()
-        P = W.to_world(sil + [0, -0.5, 0], t46["M"], t46["scale"])
+        P = W.to_world(sil + [0, -0.18, 0], t46["M"], t46["scale"])
         k = in_out_sine(lin(t, B["c3.problem"] + 0.3, B["c3.problem"] + 1.5))
         inten = 0.75 * (1 - smooth(lin(t, B["c3.s2"] - 0.5, B["c3.s2"] - 0.1)))
         root_glow = 1 + 0.6 * smooth(lin(t, B["c3.raiz"] - 0.2, B["c3.raiz"] + 0.3)) * (1 - smooth(lin(t, B["c3.raiz"] + 0.6, B["c3.raiz"] + 1.1)))
@@ -402,7 +402,7 @@ def line_items(t, fmt, layout):
     # ======================= C4: rehabilitación =======================
     if B["c4.problem"] < t < B["c4.s1"] + 0.3:
         sil = silhouette(crown_only=True)
-        P = W.to_world(sil + [0, -0.5, 0], t46["M"], t46["scale"])
+        P = W.to_world(sil + [0, -0.18, 0], t46["M"], t46["scale"])
         k = in_out_sine(lin(t, B["c4.problem"] + 0.2, B["c4.problem"] + 1.2))
         pulse = 0.75 + 0.25 * math.sin(2 * math.pi * 0.9 * t)
         inten = 0.8 * pulse * (1 - smooth(lin(t, B["c4.s1"] - 0.2, B["c4.s1"] + 0.2)))
