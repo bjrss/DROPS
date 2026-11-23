@@ -20,6 +20,41 @@ from bl_util import reset, make_mesh, link_dup, set_matrix, look_at_matrix, eeve
 GEO = ROOT / "build" / "geo"
 DEFAULT_PROPS = dict(vis=1.0, wipe=-10.0, xray=0.0, inflame=0.0, pulse=0.0, dissolve=0.0,
                      fill=2.0, hot=0.0, heal=0.0, caries_amt=0.0)
+UPPER_OBJECTS = []
+# target triangle budget per mesh (EEVEE on a CPU rasteriser is geometry bound)
+TRI_BUDGET = {"tooth_molar": 20000, "tooth_premolar": 11000, "tooth_canine": 12000, "tooth_incisor": 8000,
+              "hero_molar": 60000, "bone_full": 90000, "gum_full": 120000, "upper_gum": 70000,
+              "bone_cut": None, "gum_cut": 60000, "implant": 55000, "osseoC": 30000, "crown46": 35000,
+              "healing": 16000, "abutment": 12000, "pulp36": 30000, "gutta": 10000, "caries36": 8000,
+              "resto36": 10000, "fillB": 16000, "flapB": 12000, "osteoB": 6000}
+
+
+def decimate(ob, key):
+    budget = TRI_BUDGET.get(key)
+    n = len(ob.data.polygons)
+    if not budget or n <= budget:
+        return
+    m = ob.modifiers.new("dec", "DECIMATE")
+    m.ratio = budget / n
+    m.use_collapse_triangulate = True
+    dg = bpy.context.evaluated_depsgraph_get()
+    me = bpy.data.meshes.new_from_object(ob.evaluated_get(dg), preserve_all_data_layers=True, depsgraph=dg)
+    old = ob.data
+    ob.modifiers.remove(m)
+    ob.data = me
+    me.name = old.name
+    if old.users == 0:
+        bpy.data.meshes.remove(old)
+
+
+def budget_key(geo):
+    if geo.startswith("bone_cut"):
+        return "bone_cut"
+    if geo.startswith("gum_cut"):
+        return "gum_cut"
+    if geo.startswith("gutta"):
+        return "gutta"
+    return geo
 
 
 def load(name):
@@ -31,6 +66,7 @@ def load(name):
 def obj(name, geo, mat, coll, M=None, scale=None, **props):
     v, f, attrs = load(geo)
     ob = make_mesh(name, v, f, attrs=attrs, collection=coll)
+    decimate(ob, budget_key(geo) if geo != "tooth_molar" else "hero_molar")
     ob.data.materials.append(mat)
     for k, val in {**DEFAULT_PROPS, **props}.items():
         ob[k] = float(val)
@@ -42,6 +78,8 @@ def obj(name, geo, mat, coll, M=None, scale=None, **props):
 def build():
     reset()
     import materials as MT
+    t36 = W.tooth(W.SITE_ENDO)
+    MT.REVEAL_CENTER = W.to_world(np.array([0.0, 0.0, -0.3]), t36["M"], t36["scale"])
 
     scn = bpy.context.scene
     scn.frame_start, scn.frame_end = 0, CFG.NFRAMES - 1
@@ -67,7 +105,7 @@ def build():
         xray=MT.xray_material("xray"),
         pulp=MT.pulp_material("pulp"),
         gutta=MT.fill_material("gutta", "gutta", rough=0.35, field="u", emission_hot="line_core"),
-        caries=MT.simple_material("caries", "caries", rough=0.8),
+        caries=MT.fill_material("caries", "caries", rough=0.8, field="u"),
         resto=MT.fill_material("resto", (0.93, 0.90, 0.83), rough=0.3, field="u", coat=0.4, sss=0.15),
         gum=MT.tissue_material("gum", "gum"),
         bone=MT.tissue_material("bone", "bone"),
@@ -75,10 +113,10 @@ def build():
                                   emission_hot="line_core"),
         ti_simple=MT.simple_material("ti_simple", "titanium", rough=0.3, metal=1.0, aniso=0.5),
         ceramic=MT.simple_material("ceramic", "ceramic", rough=0.22, coat=0.5, sss=0.25),
-        osseo=MT.fill_material("osseo", "bone", rough=0.7, field="u", emission_hot="brand_light"),
+        osseo=MT.fill_material("osseo", "bone", rough=0.7, field="u", emission_hot="brand_light", hot_gain=2.0),
     )
     # glow of the osseo sleeve uses brand blue; bone fill uses bone colours
-    mats["fill_bone"] = MT.fill_material("fill_bone", "bone", rough=0.7, field="u", emission_hot="brand_light")
+    mats["fill_bone"] = MT.fill_material("fill_bone", "bone", rough=0.7, field="u", emission_hot="brand_light", hot_gain=1.2)
 
     # ---------------- teeth
     kinds = {}
@@ -94,7 +132,8 @@ def build():
         target = coll["upper"] if d["upper"] else coll["teeth"]
         if d["fdi"] == W.SITE_ENDO:
             ob = make_mesh(name, kinds[k][0], kinds[k][1], attrs=kinds[k][2], collection=target)
-            v = kinds[k][0]
+            decimate(ob, "hero_molar")
+            v = np.array([vv.co[:] for vv in ob.data.vertices])
             # caries stain mask near the occlusal fissure (mesial-central)
             cm = np.exp(-(((v[:, 0] + 0.12) / 0.2) ** 2 + ((v[:, 1] + 0.05) / 0.16) ** 2)) * (v[:, 2] > 0.45)
             a = ob.data.attributes.new("caries_mask", "FLOAT", "POINT")
@@ -103,6 +142,7 @@ def build():
         else:
             if k not in meshes:
                 meshes[k] = make_mesh(f"_{k}", kinds[k][0], kinds[k][1], attrs=kinds[k][2], collection=target)
+                decimate(meshes[k], f"tooth_{k}")
                 meshes[k].data.materials.append(mats["tooth"])
                 ob = meshes[k]
                 ob.name = name
@@ -135,8 +175,9 @@ def build():
         o.data.materials[0] = _no_cut_copy(base)
 
     # ---------------- surgery pieces (site B)
-    for nm, geo, mat in (("flapB", "flapB", "gum"), ("osteoB", "osteoB", "bone")):
-        o = obj(nm, geo, _no_cut_copy(mats[mat]), coll["surgery"], vis=0.0)
+    obj("flapB", "flapB", _no_cut_copy(mats["gum"]), coll["surgery"], vis=0.0)
+    fx = obj("flapBx", "flapB", mats["xray"], coll["surgery"], xray=0.0)
+    obj("osteoB", "osteoB", mats["fill_bone"], coll["surgery"], vis=0.0)
     obj("fillB", "fillB", mats["fill_bone"], coll["surgery"], fill=-0.01)
 
     # ---------------- implant site (C)
@@ -150,8 +191,16 @@ def build():
     t46 = W.tooth(W.SITE_IMPLANT)
     obj("crown46", "crown46", mats["ceramic"], coll["implant"], t46["M"], t46["scale"], vis=0.0)
 
-    # ---------------- upper arch soft tissue
+    # ---------------- upper arch soft tissue + rig (closes in the bite step)
     obj("upper_gum", "upper_gum", _no_cut_copy(mats["gum"]), coll["upper"])
+    rig_u = bpy.data.objects.new("upper_rig", None)
+    scn.collection.objects.link(rig_u)
+    for o in coll["upper"].objects:
+        o.parent = rig_u
+        o["vis"] = 0.0
+        UPPER_OBJECTS.append(o.name)
+    scn["rr"] = 100.0
+    scn["upper_objects"] = ",".join(UPPER_OBJECTS)
 
     # ---------------- camera, lights, world
     for fmt in CFG.PLATES:

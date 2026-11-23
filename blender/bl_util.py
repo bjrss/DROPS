@@ -140,7 +140,7 @@ class NT:
         return o
 
 
-def eevee_settings(scene, samples=12, res=(810, 1440), mb=True):
+def eevee_settings(scene, samples=6, res=(810, 1440), mb=True):
     scene.render.engine = "BLENDER_EEVEE_NEXT"
     e = scene.eevee
     e.taa_render_samples = samples
@@ -158,7 +158,7 @@ def eevee_settings(scene, samples=12, res=(810, 1440), mb=True):
     scene.render.image_settings.color_mode = "RGBA"
     scene.render.image_settings.color_depth = "8"
     scene.view_settings.view_transform = "AgX"
-    scene.view_settings.look = "AgX - Medium High Contrast"
+    scene.view_settings.look = "AgX - Punchy"
     scene.view_settings.exposure = 0.0
     scene.render.fps = 30
 

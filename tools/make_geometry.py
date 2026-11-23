@@ -68,7 +68,8 @@ def make_teeth():
         d = d + n
         return smax(d, T.molar_outer(P) + 0.006, 0.01)
     v, f = mesh_sdf(caries, (-0.45, -0.4, 0.15), (0.25, 0.25, 0.85), st(0.007))
-    save("caries36", laplacian(v, f, 1), f)
+    v = laplacian(v, f, 1)
+    save("caries36", v, f, u=1.0 - (v[:, 2] - v[:, 2].min()) / np.ptp(v[:, 2]))
     # restoration (access cavity filling), sits in the occlusal surface
     def resto(P):
         d = ellipsoid(P, (-0.06, -0.02, 0.62), (0.3, 0.22, 0.2))
@@ -77,7 +78,7 @@ def make_teeth():
         return d
     v, f = mesh_sdf(resto, (-0.5, -0.4, 0.3), (0.4, 0.4, 0.85), st(0.007))
     v = laplacian(v, f, 1)
-    save("resto36", v, f, u=1.0 - (v[:, 2] - v[:, 2].min()) / np.ptp(v[:, 2]))
+    save("resto36", v, f, u=(v[:, 2] - v[:, 2].min()) / np.ptp(v[:, 2]))
     # ceramic crown for the implant (molar crown, hollow for the abutment)
     def crown(P):
         d = T.molar_outer(P, crown_only=True)
@@ -199,12 +200,18 @@ def make_cuts():
         def bone_cut(P, name=name):
             rem, slab = cut_fields(P, name)
             B = W.bone_sdf(P) + 0.004
-            return np.maximum(np.maximum(B, slab), -rem)
+            d = np.maximum(np.maximum(B, slab), -rem)
+            if name == "cutB":
+                d = np.maximum(d, -osteo_window(P))
+            return d
 
         def gum_cut(P, name=name):
             rem, slab = cut_fields(P, name)
             G = W.gum_sdf(P) + 0.004
-            return np.maximum(np.maximum(G, slab), -rem)
+            d = np.maximum(np.maximum(G, slab), -rem)
+            if name == "cutB":
+                d = np.maximum(d, -flap_box(P))
+            return d
 
         for kind, fn, ref in (("bone", bone_cut, lambda P: W.bone_sdf(P)), ("gum", gum_cut, None)):
             v, f = mesh_sdf(fn, lo, hi, step)
@@ -216,6 +223,22 @@ def make_cuts():
             save(f"{kind}_{name}", v, f, cap=cap, depth=depth)
 
 
+def _wis_crown():
+    wis = W.tooth(W.SITE_WISDOM)
+    return W.to_world(np.array([0, 0, 0.45]), wis["M"], wis["scale"])
+
+
+def flap_box(P):
+    """Gum over the wisdom tooth crown, lingual half (visible after the cut)."""
+    Mf = W.site_frame(W.SITE_WISDOM)
+    Q = (P - Mf[:3, 3]) @ Mf[:3, :3]
+    return round_box(Q, (-0.02, 0.35, 0.25), (0.5, 0.45, 0.42), 0.08)
+
+
+def osteo_window(P):
+    return sphere(P, _wis_crown(), 0.52)
+
+
 # ------------------------------------------------------------------ surgery (site B) pieces
 def make_surgery():
     step = st(0.014)
@@ -224,11 +247,6 @@ def make_surgery():
     lo, hi = site_bounds("cutB")
     crown_c = W.to_world(np.array([0, 0, 0.45]), wis["M"], wis["scale"])
 
-    def flap_box(P):
-        # gum over the wisdom tooth crown, lingual half (visible after the cut)
-        Mf = W.site_frame(W.SITE_WISDOM)
-        Q = (P - Mf[:3, 3]) @ Mf[:3, :3]
-        return round_box(Q, (-0.02, 0.35, 0.25), (0.5, 0.45, 0.42), 0.08)
 
     def flap(P):
         rem, slab = cut_fields(P, "cutB")
@@ -244,12 +262,13 @@ def make_surgery():
         rem, slab = cut_fields(P, "cutB")
         B = W.bone_sdf(P) + 0.002
         d = np.maximum(np.maximum(B, slab), -rem)
-        win = sphere(P, crown_c, 0.55)
-        return smax(d, win, 0.0)
+        return smax(d, osteo_window(P), 0.0)
     v, f = mesh_sdf(osteo, lo, hi, step)
     rem, _ = cut_fields(v, "cutB")
-    save("osteoB", laplacian(v, f, 1), f, cap=(np.abs(rem) < step * 0.75).astype(np.float32),
-         depth=-W.bone_sdf(v, sockets=False))
+    v = laplacian(v, f, 1)
+    dc = np.linalg.norm(v - crown_c, axis=1)
+    save("osteoB", v, f, cap=(np.abs(rem) < step * 0.75).astype(np.float32),
+         depth=-W.bone_sdf(v, sockets=False), u=1.0 - dc / dc.max())
     # socket fill: volume of the wisdom tooth inside the bone envelope (lingual half)
     def fill(P):
         rem, slab = cut_fields(P, "cutB")

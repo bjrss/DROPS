@@ -51,6 +51,21 @@ def with_alpha(nt, shader, alpha):
     return mx
 
 
+REVEAL_CENTER = None
+
+
+def reveal_alpha(nt):
+    """1 where the world position lies within scene['rr'] (+ noise) of the hero tooth."""
+    geo = nt.n("ShaderNodeNewGeometry")
+    rel = nt.vmath("SUBTRACT", geo.outputs["Position"], tuple(REVEAL_CENTER))
+    dist = nt.vmath("LENGTH", rel)
+    noi = nt.n("ShaderNodeTexNoise", Scale=2.5, Detail=0.0)
+    nt.link(geo.outputs["Position"], noi.inputs["Vector"])
+    d2 = nt.math("ADD", dist, nt.math("MULTIPLY", noi.outputs["Fac"], 0.9))
+    rr = nt.attr("rr", "VIEW_LAYER").outputs["Fac"]
+    return nt.math("LESS_THAN", d2, rr)
+
+
 def clip_fields(nt):
     """Common clip: object attribute 'vis' (0/1) and cut-away boxes evaluated in world space.
     Returns alpha socket (1 = visible)."""
@@ -66,12 +81,11 @@ def tooth_material(name="tooth", stain=False):
     sep = nt.n("ShaderNodeSeparateXYZ")
     nt.link(tc.outputs["Object"], sep.inputs[0])
     z = sep.outputs["Z"]
-    crown = nt.math("SMOOTH_MIN", z, 1.0)  # placeholder to keep z socket
     k = nt.n("ShaderNodeMapRange", **{"From Min": -0.02, "From Max": 0.07})
     nt.link(z, k.inputs["Value"])
     kz = k.outputs["Result"]
     # subtle enamel variation
-    noi = nt.n("ShaderNodeTexNoise", Scale=18.0, Detail=3.0)
+    noi = nt.n("ShaderNodeTexNoise", Scale=18.0, Detail=1.0)
     nt.link(tc.outputs["Object"], noi.inputs["Vector"])
     enamel = nt.mixc(nt.math("MULTIPLY", noi.outputs["Fac"], 0.25), L["enamel"], (0.93, 0.89, 0.80))
     col = nt.mixc(kz, L["dentin"], enamel)
@@ -90,11 +104,13 @@ def tooth_material(name="tooth", stain=False):
     alpha = nt.attr("vis").outputs["Fac"]
     # dissolve field: object z + noise (for the x-ray scan wipe): visible where z < wipe
     wipe = nt.attr("wipe").outputs["Fac"]
-    n2 = nt.n("ShaderNodeTexNoise", Scale=9.0, Detail=2.0)
+    n2 = nt.n("ShaderNodeTexNoise", Scale=9.0, Detail=0.0)
     nt.link(tc.outputs["Object"], n2.inputs["Vector"])
     field = nt.math("ADD", z, nt.math("MULTIPLY", n2.outputs["Fac"], 0.12))
     keep = nt.math("GREATER_THAN", field, wipe)
     alpha = nt.math("MULTIPLY", alpha, keep)
+    if not stain and REVEAL_CENTER is not None:
+        alpha = nt.math("MULTIPLY", alpha, reveal_alpha(nt))
     nt.out(with_alpha(nt, b, alpha))
     return m
 
@@ -109,13 +125,13 @@ def xray_material(name="xray", color="brand_light"):
     rim = nt.math("POWER", fr, 2.2)
     amt = nt.attr("xray").outputs["Fac"]
     em = nt.n("ShaderNodeEmission", Color=L[color])
-    nt.link(nt.math("ADD", nt.math("MULTIPLY", rim, 2.2), 0.15), em.inputs["Strength"])
+    nt.link(nt.math("ADD", nt.math("MULTIPLY", rim, 4.0), 0.25), em.inputs["Strength"])
     gl = principled(nt, **{"Base Color": (0.85, 0.93, 1.0), "Roughness": 0.08, "Alpha": 1.0,
                            "Specular IOR Level": 0.8})
     add = nt.n("ShaderNodeAddShader")
     nt.link(em.outputs[0], add.inputs[0])
     nt.link(gl.outputs[0], add.inputs[1])
-    alpha = nt.math("MULTIPLY", amt, nt.math("ADD", nt.math("MULTIPLY", rim, 0.75), 0.07), clamp=True)
+    alpha = nt.math("MULTIPLY", amt, nt.math("ADD", nt.math("MULTIPLY", rim, 0.9), 0.12), clamp=True)
     nt.out(with_alpha(nt, add, alpha))
     return m
 
@@ -132,7 +148,7 @@ def pulp_material(name="pulp"):
                           "Emission Strength": em})
     # dissolve: per-vertex random 'rnd' vs attribute 'dissolve'
     tc = nt.n("ShaderNodeTexCoord")
-    n2 = nt.n("ShaderNodeTexNoise", Scale=22.0, Detail=1.0)
+    n2 = nt.n("ShaderNodeTexNoise", Scale=22.0, Detail=0.0)
     nt.link(tc.outputs["Object"], n2.inputs["Vector"])
     d = nt.attr("dissolve").outputs["Fac"]
     keep = nt.math("GREATER_THAN", n2.outputs["Fac"], nt.math("ADD", nt.math("MULTIPLY", d, 1.2), -0.1))
@@ -141,7 +157,8 @@ def pulp_material(name="pulp"):
     return m
 
 
-def fill_material(name, color, rough=0.4, field="u", emission_hot=None, metal=0.0, aniso=0.0, coat=0.0, sss=0.0):
+def fill_material(name, color, rough=0.4, field="u", emission_hot=None, metal=0.0, aniso=0.0, coat=0.0, sss=0.0,
+                  hot_gain=6.0):
     """Generic material revealed progressively by a per-vertex float `field`
     compared to the object attribute 'fill'.  'hot' (0..1) adds an emissive glow
     (used for the light line 'cooling' into gutta-percha / titanium)."""
@@ -153,7 +170,7 @@ def fill_material(name, color, rough=0.4, field="u", emission_hot=None, metal=0.
                           "Coat Weight": coat, "Coat Roughness": 0.1,
                           "Subsurface Weight": sss, "Subsurface Scale": 0.02,
                           "Emission Color": L[emission_hot or "line_core"],
-                          "Emission Strength": nt.math("MULTIPLY", hot, 6.0)})
+                          "Emission Strength": nt.math("MULTIPLY", hot, hot_gain)})
     fld = nt.attr(field, "GEOMETRY").outputs["Fac"]
     keep = nt.math("LESS_THAN", fld, nt.attr("fill").outputs["Fac"])
     alpha = nt.math("MULTIPLY", nt.attr("vis").outputs["Fac"], keep)
@@ -170,9 +187,10 @@ def tissue_material(name, kind, section_kind=None):
     cap = nt.attr("cap", "GEOMETRY").outputs["Fac"]
     depth = nt.attr("depth", "GEOMETRY").outputs["Fac"]
     if kind == "gum":
-        noi = nt.n("ShaderNodeTexNoise", Scale=40.0, Detail=4.0)
+        noi = nt.n("ShaderNodeTexNoise", Scale=40.0, Detail=1.0)
         nt.link(tc.outputs["Object"], noi.inputs["Vector"])
-        base = nt.mixc(nt.math("MULTIPLY", noi.outputs["Fac"], 0.35), L["gum"], (0.80, 0.32, 0.34))
+        gum_deep = tuple(c * 0.86 for c in L["gum"])
+        base = nt.mixc(nt.math("MULTIPLY", noi.outputs["Fac"], 0.35), gum_deep, (0.70, 0.24, 0.27))
         sect = nt.mixc(nt.math("MULTIPLY", noi.outputs["Fac"], 0.5), (0.86, 0.42, 0.42), (0.78, 0.30, 0.32))
         col = nt.mixc(cap, base, sect)
         heal = nt.attr("heal").outputs["Fac"]
@@ -190,7 +208,7 @@ def tissue_material(name, kind, section_kind=None):
         cortical = nt.math("LESS_THAN", depth, 0.10)
         tra = nt.mixc(strut, (0.74, 0.62, 0.48), L["bone"])
         trab_col = nt.mixc(cortical, tra, (0.96, 0.93, 0.86))
-        noi = nt.n("ShaderNodeTexNoise", Scale=30.0, Detail=3.0)
+        noi = nt.n("ShaderNodeTexNoise", Scale=30.0, Detail=1.0)
         nt.link(tc.outputs["Object"], noi.inputs["Vector"])
         outer = nt.mixc(nt.math("MULTIPLY", noi.outputs["Fac"], 0.3), L["bone"], (0.86, 0.80, 0.68))
         col = nt.mixc(cap, outer, trab_col)
@@ -198,6 +216,8 @@ def tissue_material(name, kind, section_kind=None):
                               "Subsurface Scale": 0.02})
     # visibility + cut-away peel (objects 'cutA','cutB','cutC' give local frames)
     alpha = nt.attr("vis").outputs["Fac"]
+    if REVEAL_CENTER is not None:
+        alpha = nt.math("MULTIPLY", alpha, reveal_alpha(nt))
     for cname in ("cutA", "cutB", "cutC"):
         cut = bpy.data.objects.get(cname)
         if cut is None:
