@@ -103,7 +103,11 @@ def main():
     L.append("\n## Pendientes de la clínica (se muestran tal cual en pantalla)\n")
     for k, v in PLACEHOLDERS.items():
         L.append(f"- `{k}`: {v}")
-    L.append("- Foto autorizada del doctor/a: colocar en `brand/photos/doctor.png` (hoy se ve un marcador neutro).")
+    from om.config import DOCTOR_PHOTO
+    if DOCTOR_PHOTO.exists():
+        L.append("- Foto autorizada del doctor: incluida (`brand/photos/doctor.png`), recortada al rostro y torso en cada formato.")
+    else:
+        L.append("- Foto autorizada del doctor/a: colocar en `brand/photos/doctor.png` (hoy se ve un marcador neutro).")
     (ROOT / "docs").mkdir(exist_ok=True)
     (ROOT / "docs" / "BRIEF.md").write_text("\n".join(L) + "\n", encoding="utf-8")
     print("docs/BRIEF.md", len(L), "lines")

@@ -59,5 +59,5 @@ La clave de ElevenLabs la inyecta el proxy del entorno; el código nunca la lee 
 
 Valores marcados entre corchetes en `om/config.py → PLACEHOLDERS` (se muestran tal cual en pantalla):
 tiempo de oseointegración, «Impresión» vs «Escaneo digital», nombre del odontólogo/a para la validación.
-La foto autorizada del doctor/a va en `brand/photos/doctor.png`; mientras no esté, el cierre muestra un
-marcador neutro rotulado «[foto autorizada del doctor/a]».
+La foto autorizada del doctor está en `brand/photos/doctor.png` (recorte al rostro y torso definido en
+`om/graphics.py → PHOTO_FOCUS`); si se reemplaza el archivo, el cierre la toma automáticamente.

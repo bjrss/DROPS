@@ -213,4 +213,4 @@ Ajustes por la grabación real: «Odonto Maipú. De la raíz a tu sonrisa.» emp
 - `osseo_time`: [tiempo de oseointegración que indique la clínica]
 - `impression_kind`: Impresión
 - `dentist_name`: [nombre del odontólogo/a]
-- Foto autorizada del doctor/a: colocar en `brand/photos/doctor.png` (hoy se ve un marcador neutro).
+- Foto autorizada del doctor: incluida (`brand/photos/doctor.png`), recortada al rostro y torso en cada formato.

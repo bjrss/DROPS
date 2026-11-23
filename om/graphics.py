@@ -152,6 +152,9 @@ def chat_icon(canvas, x, y, s, color, alpha=1.0):
         T.circle(canvas, x + s * (0.3 + 0.2 * i), y + s * 0.39, s * 0.065, "#FFFFFF", alpha)
 
 
+PHOTO_FOCUS = (0.16, 0.25, 0.82, 0.92)   # normalised crop of brand/photos/doctor.png (person, with headroom)
+
+
 def photo_panel(canvas, x, y, w, h, alpha, photo=None):
     """Doctor photo cropped into a rounded panel; a neutral placeholder if none is supplied."""
     if alpha <= 0.003:
@@ -162,12 +165,24 @@ def photo_panel(canvas, x, y, w, h, alpha, photo=None):
     if photo is not None:
         img = photo
         iw, ih = img.width(), img.height()
-        s = max(w / iw, h / ih)
-        dw, dh = iw * s, ih * s
+        # crop to the person (head + torso), keeping headroom; adapts to each format's panel shape
+        fx0, fy0, fx1, fy1 = PHOTO_FOCUS
+        Fx, Fy, Fw, Fh = fx0 * iw, fy0 * ih, (fx1 - fx0) * iw, (fy1 - fy0) * ih
+        pa = w / h
+        if Fw / Fh > pa:
+            sw, sh = Fh * pa, Fh
+            sx, sy = Fx + (Fw - sw) / 2, Fy
+        else:
+            sw, sh = Fw, Fw / pa
+            sx, sy = Fx, Fy
         paint = skia.Paint(AntiAlias=True)
         paint.setAlphaf(alpha)
-        canvas.drawImageRect(img, skia.Rect.MakeXYWH(x + (w - dw) / 2, y + (h - dh) * 0.2, dw, dh),
+        canvas.drawImageRect(img, skia.Rect.MakeXYWH(sx, sy, sw, sh), skia.Rect.MakeXYWH(x, y, w, h),
                              skia.SamplingOptions(skia.CubicResampler.Mitchell()), paint)
+        # soft brand tint at the foot of the photo so it sits in the layout
+        sh_ = skia.GradientShader.MakeLinear([skia.Point(x, y + h * 0.62), skia.Point(x, y + h)],
+                                             [T.rgba(C["brand_deep"], 0.0), T.rgba(C["brand_deep"], 0.38 * alpha)])
+        canvas.drawRect(skia.Rect.MakeXYWH(x, y, w, h), skia.Paint(Shader=sh_))
     else:
         sh = skia.GradientShader.MakeLinear([skia.Point(x, y), skia.Point(x, y + h)],
                                             [T.rgba(C["brand_light"], alpha), T.rgba(C["brand_deep"], alpha)])
