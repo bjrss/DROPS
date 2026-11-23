@@ -383,6 +383,19 @@ class Comp:
 
     SUB = (-1 / 6, 0.0, 1 / 6)   # 180-degree shutter, 3 sub-frames (real motion blur for the 2D layer)
 
+    @staticmethod
+    def subframes(t):
+        """More sub-frames while 2D elements move fast (capsules, bands, closing stack) to avoid strobing."""
+        fast = []
+        for k, t0 in CHAPTER_T0.items():
+            fast += [(t0 - 0.05, t0 + 0.9), (CHAPTER_END[k] - 0.55, CHAPTER_END[k] + 0.1)]
+        fast += [(tt - 0.05, tt + 1.0) for tt in TRANSITIONS]
+        fast += [(B["s6.stack"], B["s6.stack"] + 1.6), (B["s6.cta"], B["s6.cta"] + 0.7), (B["s7"], B["s7"] + 0.45),
+                 (B["logo.trace0"], B["logo.trace1"]), (B["s6"] - 0.3, B["s6.snap"] + 0.1)]
+        if any(a <= t <= b for a, b in fast):
+            return tuple(np.linspace(-0.25, 0.25, 9))
+        return (-1 / 6, 0.0, 1 / 6)
+
     def frame(self, f):
         t = f / FPS
         c = self.surface.getCanvas()
@@ -393,13 +406,14 @@ class Comp:
         if not hasattr(self, "ov"):
             self.ov = skia.Surface(skia.ImageInfo.Make(self.W, self.H, skia.kRGBA_8888_ColorType, skia.kPremul_AlphaType))
         acc = None
-        for d in self.SUB:
+        subs = self.subframes(t)
+        for d in subs:
             oc = self.ov.getCanvas()
             oc.clear(skia.Color(0, 0, 0, 0))
             self.overlay(oc, t + d / FPS)
             a = self.ov.makeImageSnapshot().toarray(colorType=skia.kRGBA_8888_ColorType, alphaType=skia.kPremul_AlphaType)
             acc = a.astype(np.uint16) if acc is None else acc + a
-        n = len(self.SUB)
+        n = len(subs)
         avg = ((acc + n // 2) // n).astype(np.uint8)
         img = skia.Image.fromarray(avg, colorType=skia.kRGBA_8888_ColorType, alphaType=skia.kPremul_AlphaType)
         c.drawImage(img, 0, 0)
