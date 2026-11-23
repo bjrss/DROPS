@@ -363,13 +363,7 @@ class Comp:
                 G.subtitle(c, lines, S["cx"], cy, S["size"], a, S["max_w"])
 
     # -------------------------------------------------- main
-    def frame(self, f):
-        t = f / FPS
-        c = self.surface.getCanvas()
-        c.clear(skia.Color(255, 255, 255))
-        self.stage(c, t, f)
-        self.draw_plate(c, t, f)
-        self.grain(c, f)
+    def overlay(self, c, t):
         self.xray_card(c, t)
         self.opening(c, t)
         for it in line_items(t, self.fmt, self.L):
@@ -386,6 +380,29 @@ class Comp:
             G.bands(c, t, tt, self.W, self.H)
         self.closing(c, t)
         self.subtitles(c, t)
+
+    SUB = (-1 / 6, 0.0, 1 / 6)   # 180-degree shutter, 3 sub-frames (real motion blur for the 2D layer)
+
+    def frame(self, f):
+        t = f / FPS
+        c = self.surface.getCanvas()
+        c.clear(skia.Color(255, 255, 255))
+        self.stage(c, t, f)
+        self.draw_plate(c, t, f)
+        self.grain(c, f)
+        if not hasattr(self, "ov"):
+            self.ov = skia.Surface(skia.ImageInfo.Make(self.W, self.H, skia.kRGBA_8888_ColorType, skia.kPremul_AlphaType))
+        acc = None
+        for d in self.SUB:
+            oc = self.ov.getCanvas()
+            oc.clear(skia.Color(0, 0, 0, 0))
+            self.overlay(oc, t + d / FPS)
+            a = self.ov.makeImageSnapshot().toarray(colorType=skia.kRGBA_8888_ColorType, alphaType=skia.kPremul_AlphaType)
+            acc = a.astype(np.uint16) if acc is None else acc + a
+        n = len(self.SUB)
+        avg = ((acc + n // 2) // n).astype(np.uint8)
+        img = skia.Image.fromarray(avg, colorType=skia.kRGBA_8888_ColorType, alphaType=skia.kPremul_AlphaType)
+        c.drawImage(img, 0, 0)
         arr = self.surface.makeImageSnapshot().toarray(colorType=skia.kRGBA_8888_ColorType)
         return arr[..., :3]
 
@@ -429,3 +446,84 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+# ====================================================================== capsules
+class CapsuleCards(Comp):
+    """3 s logo intro and 3 s contact outro for the stand-alone chapter clips."""
+
+    def intro(self, f, chapter):
+        t = f / FPS
+        c = self.surface.getCanvas()
+        c.clear(skia.Color(255, 255, 255))
+        self.stage(c, t + 1.0, f)
+        self.grain(c, f)
+        L = self.L
+        lo = dict(L["logo_open"])
+        h = int(lo["h"] * 0.82)
+        w = h * LG.ASPECT
+        x = lo["x"] + (lo["w"] - w) / 2
+        y = lo["y"] + (lo["h"] - h) / 2 - (40 if self.fmt != "16x9" else 0)
+        head = in_out_sine(lin(t, 0.15, 1.15))
+        out_k = smooth(lin(t, 2.55, 3.0))
+        if head >= 1 and out_k <= 0:
+            c.drawImage(logo_img(h), round(x), round(y))
+        else:
+            p = skia.Paint(AntiAlias=True)
+            p.setAlphaf(1 - out_k)
+            c.drawImage(_img(LG.revealed(h, head)), round(x), round(y), SAMP, p)
+        if head < 1:
+            pts, u, on, _ = LG.trace(h)
+            draw_lightline(c, pts + [x, y], head=head, tail=max(0, head - 0.16), width=5, vis=0.35 + 0.65 * on, fade_tail=0.6)
+        wm = L["wordmark_open"]
+        G.wordmark(c, wm["cx"] if self.fmt != "16x9" else wm["cx"], wm["y"] - (40 if self.fmt != "16x9" else 0),
+                   wm["size"], alpha=1 - out_k, align=wm["align"], reveal=lin(t, 0.5, 1.6))
+        cp = L["capsule"]
+        cy = (wm["y"] + wm["size"] * 3.6) if self.fmt != "16x9" else wm["y"] + wm["size"] * 3.4
+        cx = cp["cx"] if self.fmt == "9x16" else (self.W / 2 if self.fmt == "4x5" else wm["cx"])
+        al = "center" if self.fmt != "16x9" else "left"
+        G.capsule(c, chapter["title"], cx, cy, cp["size"], 1.2, t, t_out=2.5, align=al, W=self.W)
+        return self.surface.makeImageSnapshot().toarray(colorType=skia.kRGBA_8888_ColorType)[..., :3]
+
+    def outro(self, f, sub_chunk=None):
+        t = f / FPS
+        c = self.surface.getCanvas()
+        c.clear(skia.Color(255, 255, 255))
+        self.stage(c, t + 3.0, f)
+        self.grain(c, f)
+        L = self.L
+        k = out_cubic(lin(t, 0.0, 0.6))
+        a = smooth(lin(t, 0.0, 0.35))
+        lo = L["logo_close"]
+        hh = int(lo["h"])
+        p = skia.Paint(AntiAlias=True)
+        p.setAlphaf(a)
+        if a >= 1:
+            c.drawImage(logo_img(hh), round(lo["x"]), round(lo["y"]))
+        else:
+            c.drawImage(logo_img(hh), round(lo["x"]), round(lo["y"]), SAMP, p)
+        wm = L["wordmark_close"]
+        G.wordmark(c, wm["cx"], wm["y"], wm["size"], alpha=a, align=wm["align"])
+        # contact block, centred lower half
+        fs = L["cta"]["size"] * (1.15 if self.fmt != "16x9" else 1.25)
+        cx = self.W / 2
+        y = (self.H * 0.55 if self.fmt != "16x9" else self.H * 0.52) + 40 * (1 - k)
+        line1 = CLINIC["cta"]
+        w1 = T.text_width(line1, "semibold", fs) + fs * 1.5
+        x1 = cx - w1 / 2
+        G.chat_icon(c, x1, y - fs * 0.95, fs * 1.15, C["brand_deep"], a)
+        T.draw_text(c, line1, x1 + fs * 1.5, y, "semibold", fs, C["brand_dark"], a)
+        T.draw_text(c, CLINIC["whatsapp"], cx, y + fs * 2.0, "extrabold", fs * 1.65, C["brand_deep"], a, 0.01, "center")
+        T.draw_text(c, CLINIC["address"], cx, y + fs * 3.25, "medium", fs * 0.8, C["brand_dark"], a, 0, "center")
+        T.draw_text(c, CLINIC["instagram"], cx, y + fs * 4.4, "semibold", fs * 0.9, C["brand_deep"], a, 0.02, "center")
+        d = L["disclaimer"]
+        for i, ln in enumerate(T.wrap(CLINIC["disclaimer"], "medium", d["size"] * 0.85, d["max_w"])):
+            T.draw_text(c, ln, cx, self.H - d["size"] * (2.6 - 1.3 * i) - (30 if self.fmt == "16x9" else 60), "medium",
+                        d["size"] * 0.85, C["brand_dark"], a * 0.8, 0, "center")
+        if sub_chunk:
+            S = L["sub"]
+            sa = smooth(lin(t, sub_chunk[0] - 0.1, sub_chunk[0] + 0.05)) * (1 - smooth(lin(t, sub_chunk[1] - 0.05, sub_chunk[1] + 0.1)))
+            lines = T.wrap(sub_chunk[2], "semibold", S["size"], S["max_w"])
+            G.subtitle(c, lines, S["cx"], self.H * (0.86 if self.fmt == "9x16" else 0.80) if self.fmt != "16x9" else S["cy"] - 10,
+                       S["size"], sa, S["max_w"])
+        return self.surface.makeImageSnapshot().toarray(colorType=skia.kRGBA_8888_ColorType)[..., :3]
